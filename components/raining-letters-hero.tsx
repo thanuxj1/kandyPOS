@@ -1,9 +1,94 @@
 "use client"
 
-import { useCallback, useEffect, useRef } from "react"
+import { useCallback, useEffect, useMemo, useRef } from "react"
 import { useInView } from "framer-motion"
 
+class TextScramble {
+  el: HTMLElement
+  chars: string
+  queue: Array<{ from: string; to: string; start: number; end: number; char?: string }>
+  frame: number
+  frameRequest: number
+  resolve: () => void
+
+  constructor(el: HTMLElement, chars = "!<>-_\\/[]{}—=+*^?#") {
+    this.el = el
+    this.chars = chars
+    this.queue = []
+    this.frame = 0
+    this.frameRequest = 0
+    this.resolve = () => {}
+    this.update = this.update.bind(this)
+  }
+
+  setText(newText: string) {
+    const oldText = this.el.innerText || ""
+    const length = Math.max(oldText.length, newText.length)
+    const promise = new Promise<void>((resolve) => (this.resolve = resolve))
+    this.queue = []
+    for (let i = 0; i < length; i++) {
+      const from = oldText[i] || ""
+      const to = newText[i] || ""
+      const start = Math.floor(Math.random() * 40)
+      const end = start + Math.floor(Math.random() * 40)
+      this.queue.push({ from, to, start, end })
+    }
+    if (typeof window !== "undefined") {
+      cancelAnimationFrame(this.frameRequest)
+      this.frame = 0
+      this.update()
+    }
+    return promise
+  }
+
+  update() {
+    let complete = 0
+    if (typeof document === "undefined") return
+    const frag = document.createDocumentFragment()
+    for (let i = 0, n = this.queue.length; i < n; i++) {
+      let { from, to, start, end, char } = this.queue[i]
+      if (this.frame >= end) {
+        complete++
+        frag.appendChild(document.createTextNode(to))
+      } else if (this.frame >= start) {
+        if (!char || Math.random() < 0.28) {
+          char = this.chars[Math.floor(Math.random() * this.chars.length)]
+          this.queue[i].char = char
+        }
+        const span = document.createElement("span")
+        span.setAttribute("data-dud", "1")
+        span.textContent = char
+        frag.appendChild(span)
+      } else {
+        frag.appendChild(document.createTextNode(from))
+      }
+    }
+    while (this.el.firstChild) this.el.removeChild(this.el.firstChild)
+    this.el.appendChild(frag)
+    if (complete === this.queue.length) {
+      this.resolve()
+    } else {
+      this.frameRequest = requestAnimationFrame(this.update)
+      this.frame++
+    }
+  }
+
+  destroy() {
+    if (typeof window !== "undefined") {
+      cancelAnimationFrame(this.frameRequest)
+    }
+  }
+}
+
 export function RainingLettersHero() {
+  const phrases = [
+    "POS SYSTEMS",
+    "ERP SYSTEMS",
+    "AI AGENTS",
+    "WEB APPS",
+    "E-COMMERCE"
+  ]
+  const titleFallback = "POS SYSTEMS"
   const charCount = 260
   const characterSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{}|;:,.<>?"
   const minFontSizePx = 12
@@ -13,13 +98,19 @@ export function RainingLettersHero() {
   const idleColor = "#3f3f46" // zinc-700
   const activeColor1 = "#00b4b0" // Teal
   const activeColor2 = "#7bc832" // Lime
+  const titleColor = "#FFFFFF"
+  const dudColor = "#7bc832"
 
   const flickerMinActive = 4
   const flickerMaxActive = 12
   const flickerIntervalMs = 60
+  const phraseIntervalMs = 2500
 
   const containerRef = useRef<HTMLElement>(null)
   const inView = useInView(containerRef, { amount: 0.15 })
+  const titleRef = useRef<HTMLHeadingElement>(null)
+  const scramblerRef = useRef<TextScramble | null>(null)
+  const phraseTimerRef = useRef<number | null>(null)
   const spansRef = useRef<(HTMLSpanElement | null)[]>([])
   const charsRef = useRef<{char: string, xPct: number, yPct: number, speedPctPerFrame: number, isTeal: boolean}[]>([])
   const rafRef = useRef<number | null>(null)
@@ -91,6 +182,10 @@ export function RainingLettersHero() {
       window.clearInterval(flickerTimerRef.current)
       flickerTimerRef.current = null
     }
+    if (phraseTimerRef.current != null) {
+      window.clearTimeout(phraseTimerRef.current)
+      phraseTimerRef.current = null
+    }
   }, [])
 
   useEffect(() => {
@@ -103,8 +198,44 @@ export function RainingLettersHero() {
   }, [makeCharacters, applySpanStaticStyle])
 
   useEffect(() => {
+    if (!inView) return
+    if (typeof window === "undefined") return
+    if (!titleRef.current) return
+    
+    if (!scramblerRef.current) {
+      scramblerRef.current = new TextScramble(titleRef.current)
+    }
+    let counter = 0
+    let cancelled = false
+    
+    const tick = () => {
+      if (cancelled) return
+      const scrambler = scramblerRef.current
+      if (!scrambler) return
+      const phrase = phrases[counter] ?? phrases[0]
+      scrambler.setText(phrase).then(() => {
+        if (typeof window === "undefined") return
+        phraseTimerRef.current = window.setTimeout(tick, Math.max(200, phraseIntervalMs))
+      }).catch(() => {})
+      counter = (counter + 1) % phrases.length
+    }
+    
+    tick()
+    
+    return () => {
+      cancelled = true
+      if (phraseTimerRef.current != null) {
+        window.clearTimeout(phraseTimerRef.current)
+        phraseTimerRef.current = null
+      }
+    }
+  }, [inView, phraseIntervalMs]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
     return () => {
       stopAllTimers()
+      scramblerRef.current?.destroy?.()
+      scramblerRef.current = null
     }
   }, [stopAllTimers])
 
@@ -218,8 +349,8 @@ export function RainingLettersHero() {
       </div>
       
       <div className="absolute inset-0 z-20 flex flex-col items-center justify-center px-4">
-        {/* Static Title (Synced perfectly with the end of the Loading Screen) */}
         <h1 
+          ref={titleRef}
           className="font-black text-[9.5vw] sm:text-6xl md:text-8xl text-white text-center select-none whitespace-nowrap"
           style={{ 
             textShadow: "0 0 40px rgba(0,0,0,0.8)",
@@ -227,13 +358,20 @@ export function RainingLettersHero() {
           }}
           aria-label="Hero title"
         >
-          AI AGENTS
+          {titleFallback}
         </h1>
         
         <p className="mt-6 text-zinc-400 text-sm sm:text-base md:text-lg max-w-2xl mx-auto font-medium text-center shadow-black drop-shadow-lg">
           Your business&apos;s plug-and-play operating system. ERP, POS, and AI Agents built for Sri Lankan owners who want to move fast, eliminate chaos, and boost their income.
         </p>
       </div>
+
+      <style>{`
+        [data-dud="1"] { 
+          color: ${dudColor}; 
+          opacity: 0.75; 
+        }
+      `}</style>
     </section>
   )
 }
