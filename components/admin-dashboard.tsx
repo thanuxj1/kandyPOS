@@ -111,7 +111,7 @@ export default function AdminDashboard() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
-    const adminPasscode = process.env.NEXT_PUBLIC_ADMIN_PASSCODE || ""
+    const adminPasscode = process.env.NEXT_PUBLIC_ADMIN_PASSCODE || "kandypos123"
     if (adminPasscode && passcode === adminPasscode) {
       setIsAuthenticated(true)
       setAuthError("")
