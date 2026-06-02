@@ -4,6 +4,7 @@ import { Outfit } from "next/font/google"
 import { GeistMono } from "geist/font/mono"
 import { Analytics } from "@vercel/analytics/next"
 import { LenisProvider } from "@/components/providers/lenis-provider"
+import { LoadingScreen } from "@/components/loading-screen"
 import "./globals.css"
 
 const outfit = Outfit({ 
@@ -49,6 +50,7 @@ export default function RootLayout({
         />
       </head>
       <body className={`${outfit.variable} ${GeistMono.variable} font-sans antialiased bg-[#0a0a0a] text-zinc-100`}>
+        <LoadingScreen />
         <LenisProvider>{children}</LenisProvider>
         <Analytics />
       </body>
