@@ -13,26 +13,13 @@ const outfit = Outfit({
 })
 
 export const metadata: Metadata = {
-  title: "Liquid Metal Buttons | Premium UI Components",
+  title: "KandyPOS | Point of Sale & ERP Systems",
   description:
-    "A collection of premium button components featuring animated liquid metal borders powered by Paper Shaders.",
+    "Your business's plug-and-play operating system. ERP, POS, and AI Agents built for modern business owners.",
   generator: "v0.app",
   icons: {
-    icon: [
-      {
-        url: "/icon-light-32x32.png",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/icon.svg",
-        type: "image/svg+xml",
-      },
-    ],
-    apple: "/apple-icon.png",
+    icon: "/icon.svg",
+    apple: "/icon.svg",
   },
 }
 

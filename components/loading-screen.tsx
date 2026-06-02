@@ -107,6 +107,14 @@ export function LoadingScreen() {
   const scramblerRef = useRef<TextScramble | null>(null)
   const phraseTimerRef = useRef<number | null>(null)
 
+  const [rainOpacity, setRainOpacity] = useState(0)
+
+  useEffect(() => {
+    // Fade in rain shortly after mount
+    const timer = setTimeout(() => setRainOpacity(1), 100)
+    return () => clearTimeout(timer)
+  }, [])
+
   // Build characters
   useEffect(() => {
     charsRef.current = Array.from({ length: CHAR_COUNT }, () => ({
@@ -201,7 +209,7 @@ export function LoadingScreen() {
     }
 
     const phrases = [
-      "POS SYSTEMS",
+      "KANDY POS",
       "ERP SYSTEMS",
       "WEB APPS",
       "E-COMMERCE",
@@ -269,7 +277,12 @@ export function LoadingScreen() {
       />
 
       {/* Raining characters */}
-      <div ref={canvasContainerRef} className="absolute inset-0" aria-hidden="true">
+      <div 
+        ref={canvasContainerRef} 
+        className="absolute inset-0 transition-opacity duration-1000 ease-in-out" 
+        style={{ opacity: rainOpacity }}
+        aria-hidden="true"
+      >
         {Array.from({ length: CHAR_COUNT }).map((_, idx) => (
           <span
             key={idx}
@@ -290,7 +303,7 @@ export function LoadingScreen() {
           }}
           aria-label="Hero title"
         >
-          POS SYSTEMS
+          KANDY POS
         </h1>
       </div>
     </div>
