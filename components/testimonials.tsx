@@ -14,109 +14,24 @@ export interface Testimonial {
   avatar: string
 }
 
-const DEFAULT_TESTIMONIALS: Testimonial[] = [
-  {
-    id: "t1",
-    name: "Thanuja Senanayake",
-    role: "Managing Director",
-    company: "The Royal Bean Cafe",
-    text: "Kandy POS transformed our order speed! Table checkouts take literally 3 seconds now. Our waiters love the handheld terminals, and kitchen slip print-errors have dropped to zero.",
-    rating: 5,
-    avatar: "/professional-headshot-1.png",
-  },
-  {
-    id: "t2",
-    name: "Mohamed Rilwan",
-    role: "Operations Head",
-    company: "City Grocers Supermarket",
-    text: "Superb inventory control. We managed to load over 15,000 barcode lines without a single hitch. Even during internet outages, the checkout counter works perfectly. Essential software!",
-    rating: 5,
-    avatar: "/professional-headshot-2.png",
-  },
-  {
-    id: "t3",
-    name: "Dilini Perera",
-    role: "Founder & Creative",
-    company: "Heritage Silk Boutique",
-    text: "Beautiful layout, easy training. We got our sales staff comfortable with the billing tablet in just 10 minutes. The automated WhatsApp bills save us hundreds in paper roll costs.",
-    rating: 5,
-    avatar: "/professional-headshot-3.png",
-  },
-  {
-    id: "t4",
-    name: "Kasun Silva",
-    role: "Franchise Owner",
-    company: "Burger Hub",
-    text: "The multi-branch management is phenomenal. I can monitor live sales from all 4 of my outlets straight from my phone. A total game-changer for my business operations.",
-    rating: 5,
-    avatar: "/professional-headshot-4.png",
-  },
-  {
-    id: "t5",
-    name: "Amala Fernando",
-    role: "Retail Manager",
-    company: "Glow Cosmetics",
-    text: "Customer loyalty features have brought our repeat customer rate up by 40%. The UI is so slick and modern, our cashiers love using it every day.",
-    rating: 5,
-    avatar: "/professional-headshot-5.png",
-  },
-  {
-    id: "t6",
-    name: "Ruwan Wijesinghe",
-    role: "CEO",
-    company: "Wijesinghe Hardware",
-    text: "Handling bulk inventory and wholesale pricing used to be a nightmare. Kandy POS handles variable pricing tiers effortlessly. Best POS investment we've ever made.",
-    rating: 5,
-    avatar: "/professional-headshot-6.png",
-  },
-  {
-    id: "t7",
-    name: "Chaminda Jayasuriya",
-    role: "Owner",
-    company: "Jayasuriya Auto Parts",
-    text: "The system is incredibly fast and reliable. Even when our internet drops, we never miss a sale. The offline mode is a lifesaver for businesses in Sri Lanka.",
-    rating: 5,
-    avatar: "/professional-headshot-1.png",
-  },
-  {
-    id: "t8",
-    name: "Nadeesha Kuruppu",
-    role: "Finance Director",
-    company: "Kuruppu Textiles",
-    text: "Accounting integration is seamless. We save at least 15 hours a week on manual bookkeeping. It's the most comprehensive ERP we've used.",
-    rating: 5,
-    avatar: "/professional-headshot-3.png",
-  },
-  {
-    id: "t9",
-    name: "Suresh Bandara",
-    role: "General Manager",
-    company: "Bandara Hotels",
-    text: "The AI chatbot features have revolutionized how we take reservations. Our staff can focus on the guests while the system handles the busywork.",
-    rating: 5,
-    avatar: "/professional-headshot-4.png",
-  },
-]
-
 export default function Testimonials() {
-  const [testimonials, setTestimonials] = useState<Testimonial[]>(DEFAULT_TESTIMONIALS)
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const saved = localStorage.getItem("kandy_testimonials_v2")
-    if (saved) {
-      try {
-        setTestimonials(JSON.parse(saved))
-      } catch (e) {
-        console.error("Error parsing local testimonials", e)
-      }
-    } else {
-      localStorage.setItem("kandy_testimonials_v2", JSON.stringify(DEFAULT_TESTIMONIALS))
-      setTestimonials(DEFAULT_TESTIMONIALS)
-    }
+    fetch("/api/testimonials")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setTestimonials(data)
+      })
+      .catch((err) => console.error("Failed to load testimonials:", err))
+      .finally(() => setLoading(false))
   }, [])
 
-  // Duplicate items to ensure a seamless infinite horizontal loop
-  const loopItems = [...testimonials, ...testimonials, ...testimonials, ...testimonials]
+  // Duplicate items for seamless infinite horizontal loop
+  const loopItems = testimonials.length > 0
+    ? [...testimonials, ...testimonials, ...testimonials, ...testimonials]
+    : []
 
   return (
     <section id="testimonials" className="py-10 sm:py-16 px-4 relative overflow-hidden bg-[#0a0a0a]">
@@ -167,52 +82,73 @@ export default function Testimonials() {
           </p>
         </motion.div>
 
-        {/* Infinite Horizontal Scroller - Single Line with Left & Right Fading Overlays */}
-        <div 
-          className="relative w-full overflow-hidden py-4 select-none"
-          style={{
-            WebkitMaskImage: "linear-gradient(to right, transparent, black 15%, black 85%, transparent)",
-            maskImage: "linear-gradient(to right, transparent, black 15%, black 85%, transparent)",
-          }}
-        >
-          <div className="flex gap-5 w-max scroll-row-horizontal">
-            {loopItems.map((test, idx) => (
+        {/* Loading skeleton */}
+        {loading && (
+          <div className="flex gap-5 overflow-hidden py-4">
+            {[...Array(4)].map((_, i) => (
               <div
-                key={test.id + "-" + idx}
-                className="w-[380px] sm:w-[410px] shrink-0 p-6 rounded-2xl bg-zinc-950/60 border border-zinc-900 flex flex-col justify-between h-[175px] transition-all duration-300 hover:border-zinc-800 hover:bg-zinc-900/10 cursor-default"
-              >
-                <div>
-                  {/* Rating Stars */}
-                  <div className="flex items-center gap-1 mb-3">
-                    {[...Array(test.rating || 5)].map((_, i) => (
-                      <Star key={i} className="w-3 h-3 text-amber-500 fill-amber-500" />
-                    ))}
-                  </div>
-
-                  {/* Review Text */}
-                  <p className="text-zinc-400 text-[11px] sm:text-xs leading-relaxed italic line-clamp-3">
-                    "{test.text}"
-                  </p>
-                </div>
-
-                {/* Profile Meta info */}
-                <div className="flex items-center gap-3 mt-4">
-                  <div className="w-7 h-7 rounded-full bg-zinc-900 border border-zinc-850 flex items-center justify-center text-[10px] font-bold text-zinc-400">
-                    {test.name.charAt(0)}
-                  </div>
-                  <div>
-                    <h4 className="text-[11px] sm:text-xs font-bold text-white leading-tight">
-                      {test.name}
-                    </h4>
-                    <span className="text-[9px] text-zinc-500 font-mono">
-                      {test.role}, {test.company}
-                    </span>
-                  </div>
-                </div>
-              </div>
+                key={i}
+                className="w-[380px] sm:w-[410px] shrink-0 h-[175px] rounded-2xl bg-zinc-900/40 border border-zinc-900 animate-pulse"
+              />
             ))}
           </div>
-        </div>
+        )}
+
+        {/* Infinite Horizontal Scroller */}
+        {!loading && testimonials.length > 0 && (
+          <div
+            className="relative w-full overflow-hidden py-4 select-none"
+            style={{
+              WebkitMaskImage: "linear-gradient(to right, transparent, black 15%, black 85%, transparent)",
+              maskImage: "linear-gradient(to right, transparent, black 15%, black 85%, transparent)",
+            }}
+          >
+            <div className="flex gap-5 w-max scroll-row-horizontal">
+              {loopItems.map((test, idx) => (
+                <div
+                  key={test.id + "-" + idx}
+                  className="w-[380px] sm:w-[410px] shrink-0 p-6 rounded-2xl bg-zinc-950/60 border border-zinc-900 flex flex-col justify-between h-[175px] transition-all duration-300 hover:border-zinc-800 hover:bg-zinc-900/10 cursor-default"
+                >
+                  <div>
+                    {/* Rating Stars */}
+                    <div className="flex items-center gap-1 mb-3">
+                      {[...Array(test.rating || 5)].map((_, i) => (
+                        <Star key={i} className="w-3 h-3 text-amber-500 fill-amber-500" />
+                      ))}
+                    </div>
+
+                    {/* Review Text */}
+                    <p className="text-zinc-400 text-[11px] sm:text-xs leading-relaxed italic line-clamp-3">
+                      &quot;{test.text}&quot;
+                    </p>
+                  </div>
+
+                  {/* Profile Meta info */}
+                  <div className="flex items-center gap-3 mt-4">
+                    <div className="w-7 h-7 rounded-full bg-zinc-900 border border-zinc-850 flex items-center justify-center text-[10px] font-bold text-zinc-400">
+                      {test.name.charAt(0)}
+                    </div>
+                    <div>
+                      <h4 className="text-[11px] sm:text-xs font-bold text-white leading-tight">
+                        {test.name}
+                      </h4>
+                      <span className="text-[9px] text-zinc-500 font-mono">
+                        {test.role}{test.company ? `, ${test.company}` : ""}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!loading && testimonials.length === 0 && (
+          <div className="text-center py-20 border border-dashed border-zinc-800 rounded-3xl">
+            <p className="text-zinc-500 text-sm font-mono">No testimonials yet. Add some in the Admin Dashboard.</p>
+          </div>
+        )}
       </div>
     </section>
   )

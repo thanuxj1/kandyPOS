@@ -20,50 +20,6 @@ interface Project {
   projectUrl?: string
 }
 
-const DEFAULT_PROJECTS: Project[] = [
-  {
-    id: "royal-bean",
-    title: "The Royal Bean Cafe",
-    client: "Royal Bean Ltd",
-    category: "Cafe & Bistro POS",
-    description:
-      "Cloud table ordering, split-billing, and KDS dispatch deployed across 4 coffee shop branches.",
-    features: ["Split-billing checkout", "Kitchen KDS sync", "WhatsApp receipt dispatch"],
-    color: "teal",
-    icon: "cafe",
-    image: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=600&q=80",
-    requiresPermission: false,
-    projectUrl: "https://kandypos.com/bean-demo"
-  },
-  {
-    id: "city-grocers",
-    title: "City Grocers Supermarket",
-    client: "City Grocers Corp",
-    category: "Supermarket POS",
-    description:
-      "Dual-display checkouts integrated with weighing scales, barcode printers, and inventory tracking.",
-    features: ["Customer secondary screens", "Weigh scale barcode sync", "Real-time stock alerts"],
-    color: "green",
-    icon: "market",
-    image: "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80",
-    requiresPermission: false,
-    projectUrl: "https://kandypos.com/grocery-demo"
-  },
-  {
-    id: "heritage-boutique",
-    title: "Heritage Fashion Boutique",
-    client: "Heritage Silk Co",
-    category: "Boutique Retail Suite",
-    description:
-      "Elegant POS tablet counters synced with smart CRM, fashion inventory, and electronic gift cards.",
-    features: ["Loyalty customer CRM", "Digital instant receipt", "Smart tag barcode registers"],
-    color: "teal",
-    icon: "retail",
-    image: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=600&q=80",
-    requiresPermission: true, // Restricted permission demo
-  },
-]
-
 const accentMap: Record<string, { pill: string; border: string; glow: string; icon: string }> = {
   teal: {
     pill: "rgba(0,180,176,0.08)",
@@ -80,39 +36,44 @@ const accentMap: Record<string, { pill: string; border: string; glow: string; ic
 }
 
 export default function Projects() {
-  const [projects, setProjects] = useState<Project[]>(DEFAULT_PROJECTS)
+  const [projects, setProjects] = useState<Project[]>([])
+  const [loading, setLoading] = useState(true)
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
-  
-  const [contactWhatsApp, setContactWhatsApp] = useState("94770000000")
+  const [contactWhatsApp, setContactWhatsApp] = useState("94759170323")
 
   useEffect(() => {
-    const saved = localStorage.getItem("kandy_projects")
-    if (saved) {
-      try {
-        setProjects(JSON.parse(saved))
-      } catch (e) {
-        console.error("Error parsing local projects", e)
-      }
-    } else {
-      localStorage.setItem("kandy_projects", JSON.stringify(DEFAULT_PROJECTS))
-    }
+    // Load projects from API
+    fetch("/api/projects")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setProjects(data)
+      })
+      .catch((err) => console.error("Failed to load projects:", err))
+      .finally(() => setLoading(false))
 
-    setContactWhatsApp(localStorage.getItem("kandy_social_whatsapp") || "94770000000")
+    // Load WhatsApp contact from settings API
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.whatsapp) setContactWhatsApp(data.whatsapp)
+      })
+      .catch(() => {})
   }, [])
 
   const handleViewWork = (project: Project) => {
     if (project.requiresPermission) {
       setSelectedProject(project)
     } else {
-      // Unrestricted project: launch the live demo link directly!
-      const targetUrl = project.projectUrl || `https://wa.me/${contactWhatsApp.replace(/\+/g, "").trim()}?text=${encodeURIComponent(`Hello! I would like to view a case study for '${project.title}'.`)}`
+      const targetUrl = project.projectUrl ||
+        `https://wa.me/${contactWhatsApp.replace(/\+/g, "").trim()}?text=${encodeURIComponent(
+          `Hello! I would like to view a case study for '${project.title}'.`
+        )}`
       window.open(targetUrl, "_blank")
     }
   }
 
   const selectedAccent = selectedProject ? (accentMap[selectedProject.color] ?? accentMap["teal"]) : accentMap["teal"]
 
-  // WhatsApp request code URL
   const whatsappUrl = `https://wa.me/${contactWhatsApp.replace(/\+/g, "").trim()}?text=${encodeURIComponent(
     `Hello! I would like to request an access code to view the proprietary '${selectedProject?.title}' case study.`
   )}`
@@ -176,30 +137,42 @@ export default function Projects() {
           </div>
         </motion.div>
 
+        {/* Loading skeleton */}
+        {loading && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-[280px] rounded-3xl bg-zinc-900/40 border border-zinc-900 animate-pulse" />
+            ))}
+          </div>
+        )}
+
         {/* Mobile View - Interactive Card Stack */}
-        <div className="block md:hidden pb-12 pt-4">
-          <CardStack projects={projects} onViewWork={handleViewWork} isMobile={true} />
-        </div>
+        {!loading && (
+          <div className="block md:hidden pb-12 pt-4">
+            <CardStack projects={projects} onViewWork={handleViewWork} isMobile={true} />
+          </div>
+        )}
 
         {/* Desktop View - Cinematic FlowMarquee */}
-        <div className="hidden md:block mt-8">
-          {projects.length === 0 ? (
-            <div className="text-center py-20 border border-dashed border-zinc-800 rounded-3xl bg-zinc-950/20 backdrop-blur-sm">
-              <p className="text-zinc-500 text-sm font-mono">No projects currently showcased. Add some in the Admin Dashboard.</p>
-            </div>
-          ) : (
-            <div className="py-4">
-              <FlowMarquee projects={projects} onViewWork={handleViewWork} />
-            </div>
-          )}
-        </div>
+        {!loading && (
+          <div className="hidden md:block mt-8">
+            {projects.length === 0 ? (
+              <div className="text-center py-20 border border-dashed border-zinc-800 rounded-3xl bg-zinc-950/20 backdrop-blur-sm">
+                <p className="text-zinc-500 text-sm font-mono">No projects currently showcased. Add some in the Admin Dashboard.</p>
+              </div>
+            ) : (
+              <div className="py-4">
+                <FlowMarquee projects={projects} onViewWork={handleViewWork} />
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Access Restriction Compact Pop-up Modal */}
+      {/* Access Restriction Modal */}
       <AnimatePresence>
         {selectedProject && selectedProject.requiresPermission && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Backdrop cover blur */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -208,7 +181,6 @@ export default function Projects() {
               className="absolute inset-0 bg-black/85 backdrop-blur-md cursor-pointer"
             />
 
-            {/* Compact Modal Body Panel */}
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -216,13 +188,11 @@ export default function Projects() {
               transition={{ type: "spring", damping: 25, stiffness: 280 }}
               className="relative w-full max-w-[340px] overflow-hidden bg-zinc-950/95 border border-zinc-900 rounded-3xl shadow-2xl p-6 sm:p-8 z-10 text-white text-center"
             >
-              {/* Corner Spotlight Accent Glow */}
               <div
                 className="absolute top-[-50px] right-[-50px] w-[180px] h-[180px] rounded-full pointer-events-none blur-[40px] opacity-25"
                 style={{ background: selectedAccent.border }}
               />
 
-              {/* Close Button */}
               <button
                 onClick={() => setSelectedProject(null)}
                 className="absolute top-4 right-4 p-2 rounded-xl bg-zinc-900 border border-zinc-850 hover:bg-zinc-800 hover:text-white text-zinc-400 transition-colors cursor-pointer"
@@ -231,7 +201,6 @@ export default function Projects() {
               </button>
 
               <div className="pt-4 flex flex-col items-center">
-                {/* Glowing padlock emblem */}
                 <div className="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500 shadow-[0_0_20px_rgba(239,68,68,0.1)] mb-5">
                   <Lock className="w-6 h-6 animate-pulse" />
                 </div>
@@ -244,7 +213,6 @@ export default function Projects() {
                   Due to security reasons, this project can only be viewed by contacting us.
                 </p>
 
-                {/* Contact CTA Button */}
                 <a
                   href={whatsappUrl}
                   target="_blank"

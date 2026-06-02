@@ -18,13 +18,17 @@ export default function CatchAllPage() {
     }
 
     const currentSlug = slug[0].toLowerCase()
-    const savedAdminPath = (localStorage.getItem("kandy_admin_path") || "admin").toLowerCase()
 
-    if (currentSlug === savedAdminPath) {
-      setIsAdminRoute(true)
-    } else {
-      setIsAdminRoute(false)
-    }
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((data) => {
+        const savedAdminPath = (data?.admin_path || "admin").toLowerCase()
+        setIsAdminRoute(currentSlug === savedAdminPath)
+      })
+      .catch(() => {
+        // Fallback: check against default path
+        setIsAdminRoute(currentSlug === "admin")
+      })
   }, [slug])
 
   if (isAdminRoute === null) {
@@ -39,15 +43,14 @@ export default function CatchAllPage() {
     return <AdminDashboard />
   }
 
-  // Else, show a custom premium 404 page!
+  // 404 page
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center px-4 text-center font-sans overflow-hidden">
-      {/* Matte glow background */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
         <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] rounded-full bg-[#00b4b0]/[0.03] blur-[120px]" />
         <div className="absolute bottom-[-20%] right-[-10%] w-[70%] h-[70%] rounded-full bg-[#7bc832]/[0.03] blur-[120px]" />
       </div>
-      
+
       <div className="w-full max-w-md p-8 rounded-3xl bg-[#0a0a0a]/80 border border-zinc-850 shadow-2xl relative z-10 space-y-6">
         <div className="flex flex-col items-center text-center space-y-4">
           <div className="p-3.5 rounded-2xl bg-rose-950/20 border border-rose-500/10 text-rose-500 shadow-lg animate-bounce">

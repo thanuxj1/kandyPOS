@@ -11,17 +11,16 @@ export function Footer() {
   const [email, setEmail] = useState("")
 
   useEffect(() => {
-    try {
-      const savedFacebook = localStorage.getItem("kandy_social_facebook") || ""
-      const savedWhatsapp = localStorage.getItem("kandy_social_whatsapp") || ""
-      const savedEmail = localStorage.getItem("kandy_social_email") || ""
-      setFacebook(savedFacebook)
-      setWhatsapp(savedWhatsapp)
-      setEmail(savedEmail)
-    } catch {}
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.facebook) setFacebook(data.facebook)
+        if (data?.whatsapp) setWhatsapp(data.whatsapp)
+        if (data?.email) setEmail(data.email)
+      })
+      .catch(() => {})
   }, [])
 
-  // Helper formatting logic
   const getFacebookHref = () => {
     if (!facebook) return "https://facebook.com"
     if (facebook.startsWith("http://") || facebook.startsWith("https://")) return facebook
@@ -29,7 +28,7 @@ export function Footer() {
   }
 
   const getWhatsappHref = () => {
-    if (!whatsapp) return "https://wa.me/94770000000"
+    if (!whatsapp) return "https://wa.me/94759170323"
     if (whatsapp.startsWith("http://") || whatsapp.startsWith("https://")) return whatsapp
     const cleanNum = whatsapp.replace(/[^\d]/g, "")
     return `https://wa.me/${cleanNum}`
@@ -68,7 +67,6 @@ export function Footer() {
 
         {/* Social Icons Bar */}
         <div className="flex items-center gap-4">
-          {/* Facebook */}
           <a
             href={getFacebookHref()}
             target="_blank"
@@ -79,7 +77,6 @@ export function Footer() {
             <Facebook className="w-4.5 h-4.5" />
           </a>
 
-          {/* WhatsApp */}
           <a
             href={getWhatsappHref()}
             target="_blank"
@@ -90,7 +87,6 @@ export function Footer() {
             <MessageCircle className="w-4.5 h-4.5" />
           </a>
 
-          {/* Email */}
           <a
             href={getEmailHref()}
             title="Email Contact"
@@ -100,7 +96,7 @@ export function Footer() {
           </a>
         </div>
 
-        {/* Back to Top Action */}
+        {/* Back to Top */}
         <div>
           <button
             onClick={() => {

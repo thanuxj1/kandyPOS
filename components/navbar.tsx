@@ -19,7 +19,12 @@ export function Navbar() {
   const lenis = useLenis()
 
   useEffect(() => {
-    setAdminPath(localStorage.getItem("kandy_admin_path") || "admin")
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.admin_path) setAdminPath(data.admin_path)
+      })
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -44,9 +49,9 @@ export function Navbar() {
     setTimeout(() => {
       if (lenis) {
         lenis.scrollTo(href, {
-          offset: -80, // Frame the section headers perfectly with navbar height
+          offset: -80,
           duration: 1.2,
-          easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)) // Premium smooth exponential easing
+          easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t))
         })
       } else {
         document.querySelector(href)?.scrollIntoView({ behavior: "smooth" })
@@ -148,7 +153,7 @@ export function Navbar() {
         </div>
       </motion.div>
 
-      {/* ─── Mobile full-screen overlay (outside the bar) ─── */}
+      {/* ─── Mobile full-screen overlay ─── */}
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
@@ -162,7 +167,7 @@ export function Navbar() {
               background:          "rgba(10,10,10,0.98)",
               backdropFilter:      "blur(24px)",
               WebkitBackdropFilter:"blur(24px)",
-              paddingTop:          "72px", // height of the navbar bar
+              paddingTop:          "72px",
             }}
           >
             <div className="flex flex-col px-6 py-8 gap-2">
