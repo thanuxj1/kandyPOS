@@ -252,7 +252,7 @@ export function LoadingScreen() {
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden"
       style={{
-        background: "#09130f",
+        background: "#0a0a0a",
         opacity: fadeOut ? 0 : 1,
         transition: "opacity 0.7s cubic-bezier(0.4,0,0.2,1)",
         pointerEvents: fadeOut ? "none" : "auto",
