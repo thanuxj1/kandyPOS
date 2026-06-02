@@ -14,6 +14,85 @@ interface FloatingChar {
   fontSize: number
 }
 
+class TextScramble {
+  el: HTMLElement
+  chars: string
+  queue: Array<{ from: string; to: string; start: number; end: number; char?: string }>
+  frame: number
+  frameRequest: number
+  resolve: () => void
+
+  constructor(el: HTMLElement, chars = "!<>-_\\/[]{}—=+*^?#") {
+    this.el = el
+    this.chars = chars
+    this.queue = []
+    this.frame = 0
+    this.frameRequest = 0
+    this.resolve = () => {}
+    this.update = this.update.bind(this)
+  }
+
+  setText(newText: string) {
+    const oldText = this.el.innerText || ""
+    const length = Math.max(oldText.length, newText.length)
+    const promise = new Promise<void>((resolve) => (this.resolve = resolve))
+    this.queue = []
+    for (let i = 0; i < length; i++) {
+      const from = oldText[i] || ""
+      const to = newText[i] || ""
+      const start = Math.floor(Math.random() * 40)
+      const end = start + Math.floor(Math.random() * 40)
+      this.queue.push({ from, to, start, end })
+    }
+    if (typeof window !== "undefined") {
+      cancelAnimationFrame(this.frameRequest)
+      this.frame = 0
+      this.update()
+    }
+    return promise
+  }
+
+  update() {
+    let complete = 0
+    if (typeof document === "undefined") return
+    const frag = document.createDocumentFragment()
+    for (let i = 0, n = this.queue.length; i < n; i++) {
+      let { from, to, start, end, char } = this.queue[i]
+      if (this.frame >= end) {
+        complete++
+        frag.appendChild(document.createTextNode(to))
+      } else if (this.frame >= start) {
+        if (!char || Math.random() < 0.28) {
+          char = this.chars[Math.floor(Math.random() * this.chars.length)]
+          this.queue[i].char = char
+        }
+        const span = document.createElement("span")
+        span.setAttribute("data-dud", "1")
+        span.style.color = "#7bc832" // Lime green for dud characters
+        span.style.opacity = "0.75"
+        span.textContent = char
+        frag.appendChild(span)
+      } else {
+        frag.appendChild(document.createTextNode(from))
+      }
+    }
+    while (this.el.firstChild) this.el.removeChild(this.el.firstChild)
+    this.el.appendChild(frag)
+    if (complete === this.queue.length) {
+      this.resolve()
+    } else {
+      this.frameRequest = requestAnimationFrame(this.update)
+      this.frame++
+    }
+  }
+
+  destroy() {
+    if (typeof window !== "undefined") {
+      cancelAnimationFrame(this.frameRequest)
+    }
+  }
+}
+
 export function LoadingScreen() {
   const [visible, setVisible] = useState(true)
   const [fadeOut, setFadeOut] = useState(false)
@@ -23,6 +102,10 @@ export function LoadingScreen() {
   const rafRef = useRef<number | null>(null)
   const flickerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const activeSetRef = useRef<Set<number>>(new Set())
+
+  const titleRef = useRef<HTMLHeadingElement>(null)
+  const scramblerRef = useRef<TextScramble | null>(null)
+  const phraseTimerRef = useRef<number | null>(null)
 
   // Build characters
   useEffect(() => {
@@ -109,11 +192,58 @@ export function LoadingScreen() {
     return () => { if (flickerRef.current) clearInterval(flickerRef.current) }
   }, [])
 
-  // Auto-dismiss after 2.2s
+  // Text scramble effect
   useEffect(() => {
-    const fadeTimer = setTimeout(() => setFadeOut(true), 2200)
-    const hideTimer = setTimeout(() => setVisible(false), 2900)
-    return () => { clearTimeout(fadeTimer); clearTimeout(hideTimer) }
+    if (!titleRef.current) return
+    
+    if (!scramblerRef.current) {
+      scramblerRef.current = new TextScramble(titleRef.current)
+    }
+
+    const phrases = [
+      "POS SYSTEMS",
+      "ERP SYSTEMS",
+      "WEB APPS",
+      "E-COMMERCE",
+      "AI AGENTS" // Ends on this to perfectly sync with the hero section title
+    ]
+    
+    let counter = 0
+    let cancelled = false
+    
+    const tick = () => {
+      if (cancelled) return
+      const scrambler = scramblerRef.current
+      if (!scrambler) return
+      
+      const phrase = phrases[counter] ?? phrases[0]
+      
+      scrambler.setText(phrase).then(() => {
+        if (typeof window === "undefined") return
+        
+        counter++
+        // If we haven't reached the end, schedule the next phrase
+        if (counter < phrases.length) {
+          phraseTimerRef.current = window.setTimeout(tick, 450)
+        } else {
+          // Once we reach the final phrase ("AI AGENTS"), start the fade out process
+          setTimeout(() => setFadeOut(true), 800)
+          setTimeout(() => setVisible(false), 1500)
+        }
+      }).catch(() => {})
+    }
+    
+    // Start scrambling after a tiny delay
+    phraseTimerRef.current = window.setTimeout(tick, 300)
+    
+    return () => {
+      cancelled = true
+      if (phraseTimerRef.current != null) {
+        window.clearTimeout(phraseTimerRef.current)
+        phraseTimerRef.current = null
+      }
+      scramblerRef.current?.destroy()
+    }
   }, [])
 
   if (!visible) return null
@@ -150,65 +280,19 @@ export function LoadingScreen() {
 
       {/* Centre brand content */}
       <div className="relative z-10 flex flex-col items-center justify-center select-none">
-        {/* Logo wordmark */}
-        <div
-          className="font-black text-white text-center whitespace-nowrap"
-          style={{
-            fontSize: "clamp(3rem, 12vw, 8rem)",
-            letterSpacing: "-0.03em",
-            textShadow: "0 0 60px rgba(0,0,0,0.9)",
-            lineHeight: 1,
+        {/* Scrambling Title */}
+        <h1 
+          ref={titleRef}
+          className="font-black text-[9.5vw] sm:text-6xl md:text-8xl text-white text-center select-none whitespace-nowrap"
+          style={{ 
+            textShadow: "0 0 40px rgba(0,0,0,0.8)",
+            letterSpacing: "-0.02em"
           }}
+          aria-label="Hero title"
         >
-          Kandy
-          <span
-            style={{
-              backgroundImage: "linear-gradient(to right, #00b4b0, #7bc832)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-            }}
-          >
-            POS
-          </span>
-          <sup
-            style={{
-              fontSize: "0.2em",
-              WebkitTextFillColor: "#52525b",
-              verticalAlign: "super",
-              marginLeft: "0.15em",
-            }}
-          >
-            ™
-          </sup>
-        </div>
-
-        {/* Tagline */}
-        <p
-          className="mt-3 font-mono text-zinc-500 tracking-[0.3em] uppercase"
-          style={{ fontSize: "clamp(0.55rem, 1.5vw, 0.75rem)" }}
-        >
-          Point of Sale · Sri Lanka
-        </p>
-
-        {/* Animated progress bar */}
-        <div className="mt-8 w-48 h-[2px] rounded-full bg-zinc-800 overflow-hidden">
-          <div
-            className="h-full rounded-full"
-            style={{
-              background: "linear-gradient(to right, #00b4b0, #7bc832)",
-              animation: "kandyload 2s cubic-bezier(0.4,0,0.6,1) forwards",
-            }}
-          />
-        </div>
+          POS SYSTEMS
+        </h1>
       </div>
-
-      <style>{`
-        @keyframes kandyload {
-          0%   { width: 0%; opacity: 1; }
-          85%  { width: 100%; opacity: 1; }
-          100% { width: 100%; opacity: 0; }
-        }
-      `}</style>
     </div>
   )
 }
