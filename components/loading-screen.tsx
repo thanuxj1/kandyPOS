@@ -40,8 +40,8 @@ class TextScramble {
     for (let i = 0; i < length; i++) {
       const from = oldText[i] || ""
       const to = newText[i] || ""
-      const start = Math.floor(Math.random() * 40)
-      const end = start + Math.floor(Math.random() * 40)
+      const start = Math.floor(Math.random() * 12)
+      const end = start + Math.floor(Math.random() * 12)
       this.queue.push({ from, to, start, end })
     }
     if (typeof window !== "undefined") {
@@ -207,42 +207,25 @@ export function LoadingScreen() {
     if (!scramblerRef.current) {
       scramblerRef.current = new TextScramble(titleRef.current)
     }
-
-    const phrases = [
-      "KANDY POS",
-      "ERP SYSTEMS",
-      "WEB APPS",
-      "E-COMMERCE",
-      "AI AGENTS" // Ends on this to perfectly sync with the hero section title
-    ]
     
-    let counter = 0
     let cancelled = false
     
-    const tick = () => {
+    const startScramble = () => {
       if (cancelled) return
       const scrambler = scramblerRef.current
       if (!scrambler) return
       
-      const phrase = phrases[counter] ?? phrases[0]
-      
-      scrambler.setText(phrase).then(() => {
-        if (typeof window === "undefined") return
-        
-        counter++
-        // If we haven't reached the end, schedule the next phrase
-        if (counter < phrases.length) {
-          phraseTimerRef.current = window.setTimeout(tick, 450)
-        } else {
-          // Once we reach the final phrase ("AI AGENTS"), start the fade out process
-          setTimeout(() => setFadeOut(true), 800)
-          setTimeout(() => setVisible(false), 1500)
+      scrambler.setText("KANDY POS").then(() => {
+        if (typeof window !== "undefined" && !cancelled) {
+          // Immediately after KANDY POS settles, start fade out
+          setTimeout(() => setFadeOut(true), 300)
+          setTimeout(() => setVisible(false), 900)
         }
       }).catch(() => {})
     }
     
     // Start scrambling after a tiny delay
-    phraseTimerRef.current = window.setTimeout(tick, 300)
+    phraseTimerRef.current = window.setTimeout(startScramble, 150)
     
     return () => {
       cancelled = true
