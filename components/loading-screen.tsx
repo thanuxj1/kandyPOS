@@ -104,7 +104,6 @@ export function LoadingScreen() {
   const activeSetRef = useRef<Set<number>>(new Set())
 
   const titleRef = useRef<HTMLHeadingElement>(null)
-  const scramblerRef = useRef<TextScramble | null>(null)
   const phraseTimerRef = useRef<number | null>(null)
 
   const [rainOpacity, setRainOpacity] = useState(0)
@@ -204,39 +203,52 @@ export function LoadingScreen() {
   useEffect(() => {
     if (!titleRef.current) return
     
-    if (!scramblerRef.current) {
-      scramblerRef.current = new TextScramble(titleRef.current)
-    }
-    
     let cancelled = false
+    let scramblerInstance: TextScramble | null = null
     
-    // Failsafe: force fade out after 1.2s if animation/scrambling gets paused or fails (e.g. iOS Safari throttling)
+    // Failsafe: force fade out after 1.0s if animation/scrambling gets paused or fails (e.g. iOS Safari throttling)
     const failsafeTimeout = setTimeout(() => {
       if (!cancelled) {
         setFadeOut(true)
         setTimeout(() => {
           if (!cancelled) setVisible(false)
-        }, 600)
+        }, 500)
       }
-    }, 1200)
-    
-    const startScramble = () => {
-      if (cancelled) return
-      const scrambler = scramblerRef.current
-      if (!scrambler) return
+    }, 1000)
+
+    try {
+      scramblerInstance = new TextScramble(titleRef.current)
+      const scrambler = scramblerInstance
       
-      scrambler.setText("KANDY POS").then(() => {
-        if (typeof window !== "undefined" && !cancelled) {
-          clearTimeout(failsafeTimeout)
-          // Immediately after KANDY POS settles, start fade out
-          setTimeout(() => setFadeOut(true), 300)
-          setTimeout(() => setVisible(false), 900)
-        }
-      }).catch(() => {})
+      const startScramble = () => {
+        if (cancelled) return
+        
+        scrambler.setText("KANDY POS").then(() => {
+          if (typeof window !== "undefined" && !cancelled) {
+            clearTimeout(failsafeTimeout)
+            // Immediately after KANDY POS settles, start fade out
+            setTimeout(() => setFadeOut(true), 200)
+            setTimeout(() => setVisible(false), 700)
+          }
+        }).catch((err) => {
+          console.error("TextScramble error:", err)
+          if (!cancelled) {
+            setFadeOut(true)
+            setTimeout(() => {
+              if (!cancelled) setVisible(false)
+            }, 500)
+          }
+        })
+      }
+      
+      phraseTimerRef.current = window.setTimeout(startScramble, 100)
+    } catch (err) {
+      console.error("Scramble initialization failed:", err)
+      setFadeOut(true)
+      setTimeout(() => {
+        if (!cancelled) setVisible(false)
+      }, 500)
     }
-    
-    // Start scrambling after a tiny delay
-    phraseTimerRef.current = window.setTimeout(startScramble, 150)
     
     return () => {
       cancelled = true
@@ -245,7 +257,7 @@ export function LoadingScreen() {
         window.clearTimeout(phraseTimerRef.current)
         phraseTimerRef.current = null
       }
-      scramblerRef.current?.destroy()
+      scramblerInstance?.destroy()
     }
   }, [])
 
