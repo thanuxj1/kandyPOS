@@ -210,6 +210,16 @@ export function LoadingScreen() {
     
     let cancelled = false
     
+    // Failsafe: force fade out after 1.2s if animation/scrambling gets paused or fails (e.g. iOS Safari throttling)
+    const failsafeTimeout = setTimeout(() => {
+      if (!cancelled) {
+        setFadeOut(true)
+        setTimeout(() => {
+          if (!cancelled) setVisible(false)
+        }, 600)
+      }
+    }, 1200)
+    
     const startScramble = () => {
       if (cancelled) return
       const scrambler = scramblerRef.current
@@ -217,6 +227,7 @@ export function LoadingScreen() {
       
       scrambler.setText("KANDY POS").then(() => {
         if (typeof window !== "undefined" && !cancelled) {
+          clearTimeout(failsafeTimeout)
           // Immediately after KANDY POS settles, start fade out
           setTimeout(() => setFadeOut(true), 300)
           setTimeout(() => setVisible(false), 900)
@@ -229,6 +240,7 @@ export function LoadingScreen() {
     
     return () => {
       cancelled = true
+      clearTimeout(failsafeTimeout)
       if (phraseTimerRef.current != null) {
         window.clearTimeout(phraseTimerRef.current)
         phraseTimerRef.current = null
